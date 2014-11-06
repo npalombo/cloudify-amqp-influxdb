@@ -17,7 +17,7 @@
 import json
 import logging
 
-import requests
+from influxdb import client as influxdb
 import pika
 
 
@@ -76,28 +76,12 @@ class InfluxDBPublisher(object):
                  port=8086,
                  user='root',
                  password='root'):
-        self.database = database
-        self.host = host
-        self.port = port
-        self.user = user
-        self.password = password
-        self.url = 'http://{0}:{1}/db/{2}/series'.format(self.host,
-                                                         self.port,
-                                                         self.database)
-        self.params = {'u': self.user, 'p': self.password}
+
+        self.db = influxdb.InfluxDBClient(host, port, user, password, database)
 
     def process(self, body):
         data = json.dumps(self._build_body(body))
-        response = requests.post(
-            self.url,
-            data=data,
-            params=self.params,
-            headers={
-                'Content-Type': 'application/json'
-            })
-        if response.status_code != 200:
-            raise RuntimeError('influxdb response code: {0}'
-                               .format(response.status_code))
+        self.db.write_points(data)
 
     def _build_body(self, body):
         return [{

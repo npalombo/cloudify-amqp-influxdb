@@ -30,6 +30,6 @@ setup(
     },
     install_requires=[
         'pika==0.9.13',
-        'requests==2.2.1'
+        'influxdb==0.1.12'
     ],
 )

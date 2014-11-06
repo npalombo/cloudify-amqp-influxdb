@@ -20,7 +20,7 @@ import json
 
 import pika
 
-from amqp_to_influx import (InfluxDBPublisher,
+from amqp_influxdb import (InfluxDBPublisher,
                             AMQPTopicConsumer)
 
 
@@ -36,7 +36,7 @@ class Test(unittest.TestCase):
         def start():
             publisher = InfluxDBPublisher(
                 database=influx_database,
-                host='11.0.0.7')
+                host='localhost')
             consumer = AMQPTopicConsumer(
                 exchange=amqp_exchange,
                 routing_key=routing_key,
