@@ -30,6 +30,6 @@ setup(
     },
     install_requires=[
         'pika==0.9.13',
-        'requests==2.2.1'
+        'tornado==4.0.2'
     ],
 )

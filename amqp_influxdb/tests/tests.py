@@ -20,7 +20,7 @@ import json
 
 import pika
 
-from amqp_to_influx import (InfluxDBPublisher,
+from amqp_influxdb import (InfluxDBPublisher,
                             AMQPTopicConsumer)
 
 
@@ -33,25 +33,25 @@ class Test(unittest.TestCase):
 
     def test(self):
 
+        publisher = InfluxDBPublisher(
+            database=influx_database,
+            host='localhost')
+        consumer = AMQPTopicConsumer(
+            exchange=amqp_exchange,
+            routing_key=routing_key,
+            message_processor=publisher.process)
+
         def start():
-            publisher = InfluxDBPublisher(
-                database=influx_database,
-                host='11.0.0.7')
-            consumer = AMQPTopicConsumer(
-                exchange=amqp_exchange,
-                routing_key=routing_key,
-                message_processor=publisher.process)
-            consumer.consume()
+            for i in range(0, 100):
+                publish_event(i)
 
         thread = threading.Thread(target=start)
         thread.daemon = True
-
         thread.start()
-        publish_event()
-        thread.join()
+        consumer.consume()
 
 
-def publish_event():
+def publish_event(unit):
 
     event = {
         'node_id': 'node_id',
@@ -60,7 +60,7 @@ def publish_event():
         'name': 'name',
         'path': 'path',
         'metric': 100,
-        'unit': '',
+        'unit': unit,
         'type': 'type',
     }
 

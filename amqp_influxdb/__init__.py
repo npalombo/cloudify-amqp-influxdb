@@ -14,10 +14,11 @@
 # limitations under the License.
 ############
 
+import threading
 import json
 import logging
 
-import requests
+from tornado import httputil, httpclient, ioloop
 import pika
 
 
@@ -66,6 +67,11 @@ class AMQPTopicConsumer(object):
             logger.warn('Failed message processing: {0}'.format(e))
 
 
+def handle_request(response):
+    if response.error:
+        print "Error:", response.error
+
+
 class InfluxDBPublisher(object):
 
     columns = ["value", "unit", "type"]
@@ -76,28 +82,28 @@ class InfluxDBPublisher(object):
                  port=8086,
                  user='root',
                  password='root'):
-        self.database = database
-        self.host = host
-        self.port = port
-        self.user = user
-        self.password = password
-        self.url = 'http://{0}:{1}/db/{2}/series'.format(self.host,
-                                                         self.port,
-                                                         self.database)
-        self.params = {'u': self.user, 'p': self.password}
+
+        url = 'http://{0}:{1}/db/{2}/series'.format(host, port, database)
+        qs = {'u': user, 'p': password}
+        self.url = httputil.url_concat(url, qs)
+        self.client = httpclient.AsyncHTTPClient()
+
+        def start():
+            ioloop.IOLoop.instance().start()
+
+        thread = threading.Thread(target=start)
+        thread.daemon = True
+        thread.start()
 
     def process(self, body):
         data = json.dumps(self._build_body(body))
-        response = requests.post(
-            self.url,
-            data=data,
-            params=self.params,
-            headers={
-                'Content-Type': 'application/json'
-            })
-        if response.status_code != 200:
-            raise RuntimeError('influxdb response code: {0}'
-                               .format(response.status_code))
+        self.client.fetch(self.url,
+                          handle_request,
+                          body=data,
+                          method='POST',
+                          headers={
+                              'Content-Type': 'application/json'
+                          })
 
     def _build_body(self, body):
         return [{
